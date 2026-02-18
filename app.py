@@ -23,10 +23,11 @@ def load_models():
     et = joblib.load("et_model.pkl")
     rf = joblib.load("rf_model.pkl")
     xgb = joblib.load("xgb_model.pkl")
+    stack = joblib.load("stack_model.pkl")
     scaler = joblib.load("scaler.pkl")
     return et, rf, xgb, stack, scaler
 
-et_model, rf_model, xgb_model, scaler = load_models()
+et_model, rf_model, xgb_model, stack_model, scaler = load_models()
 
 # ---------------------------------------------------------
 # Sidebar Input Features
@@ -71,25 +72,27 @@ if st.button("Predict Thickness"):
     et_pred = et_model.predict(scaled_input)[0]
     rf_pred = rf_model.predict(scaled_input)[0]
     xgb_pred = xgb_model.predict(scaled_input)[0]
+    stack_pred = stack_model.predict(scaled_input)[0]
 
     # -----------------------------------------------------
     # Display Results
     # -----------------------------------------------------
     st.subheader("Predicted Unbound Layer Thickness (mm)")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Extra Trees (ET)", f"{et_pred:.2f}")
     col2.metric("Random Forest (RF)", f"{rf_pred:.2f}")
     col3.metric("XGBoost (XGB)", f"{xgb_pred:.2f}")
+    col4.metric("Stacking Model", f"{stack_pred:.2f}")
 
     # -----------------------------------------------------
     # Model Comparison Plot
     # -----------------------------------------------------
     st.subheader("Model Comparison")
 
-    models = ["ET", "RF", "XGB"]
-    predictions = [et_pred, rf_pred, xgb_pred]
+    models = ["ET", "RF", "XGB", "STACK"]
+    predictions = [et_pred, rf_pred, xgb_pred, stack_pred]
 
     fig, ax = plt.subplots()
     ax.bar(models, predictions)
