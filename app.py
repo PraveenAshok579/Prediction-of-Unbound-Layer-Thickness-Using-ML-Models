@@ -48,7 +48,7 @@ def load_model():
     df = pd.read_csv("LTPP_Unbound_Thickness_ML.csv")
     df = df.select_dtypes(include=np.number)
 
-    target = "Unbound_Thickness"   # CHANGE if needed
+    target = "REPR_THICKNESS"   # CHANGE if needed
 
     X = df.drop(columns=[target])
     y = df[target]
@@ -117,3 +117,4 @@ if st.button("Predict Unbound Layer Thickness"):
         conclusion = "Subgrade Condition: Good – Suitable for heavy traffic applications."
 
     st.success(conclusion)
+
