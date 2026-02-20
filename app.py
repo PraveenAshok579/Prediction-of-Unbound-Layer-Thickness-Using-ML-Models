@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import os
 
 # --------------------------------------------------
-# Page Config
+# Page Configuration
 # --------------------------------------------------
 st.set_page_config(
     page_title="Unbound Layer Thickness Prediction",
@@ -12,29 +13,33 @@ st.set_page_config(
 )
 
 st.title("Unbound Layer Thickness Prediction System")
-st.markdown("### LTPP-Based Machine Learning Model (Extra Trees)")
+st.markdown("Advanced Ensemble Machine Learning Framework")
 
 # --------------------------------------------------
-# Load Model and Scaler
+# Load Model & Scaler Safely
 # --------------------------------------------------
 @st.cache_resource
 def load_artifacts():
-    model = joblib.load("et_model.pkl")
-    scaler = joblib.load("scaler.pkl")
-    return model, scaler
+    try:
+        model = joblib.load("et_model.pkl")
+        scaler = joblib.load("scaler.pkl")
+        return model, scaler
+    except Exception as e:
+        st.error("Model files not found. Please check repository.")
+        st.stop()
 
 model, scaler = load_artifacts()
 
 # --------------------------------------------------
-# Get Correct Feature Names From Scaler
+# Get Correct Feature Names From Training
 # --------------------------------------------------
 feature_names = list(scaler.feature_names_in_)
 
+# --------------------------------------------------
+# Sidebar Inputs (Auto-Matched to Model)
+# --------------------------------------------------
 st.sidebar.header("Input Parameters")
 
-# --------------------------------------------------
-# Dynamic Input Creation (Prevents Feature Errors)
-# --------------------------------------------------
 def user_input():
     input_dict = {}
 
@@ -49,26 +54,30 @@ def user_input():
 input_df = user_input()
 
 # --------------------------------------------------
-# Show Input Summary
+# Display Input Summary
 # --------------------------------------------------
 st.subheader("Input Summary")
-st.write(input_df)
+st.dataframe(input_df)
 
 # --------------------------------------------------
-# Prediction Button
+# Prediction Section
 # --------------------------------------------------
 if st.button("Predict Unbound Layer Thickness"):
 
     try:
-        # Scale using trained scaler
         scaled_input = scaler.transform(input_df)
-
-        # Predict
         prediction = model.predict(scaled_input)
 
-        st.success(f"Predicted Unbound Layer Thickness: {prediction[0]:.2f}")
+        st.success(
+            f"Predicted Unbound Layer Thickness: {prediction[0]:.2f}"
+        )
 
     except Exception as e:
-        st.error("Prediction failed. Please check feature inputs.")
+        st.error("Prediction failed. Please verify inputs.")
         st.exception(e)
 
+# --------------------------------------------------
+# Footer
+# --------------------------------------------------
+st.markdown("---")
+st.markdown("Developed for LTPP-based Unbound Layer Thickness Prediction")
