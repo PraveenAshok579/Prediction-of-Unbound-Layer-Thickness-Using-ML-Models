@@ -3,16 +3,13 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 
-st.set_page_config(page_title="Unbound Thickness ML", layout="wide")
+st.set_page_config(page_title="Unbound Thickness ML Tool", layout="wide")
 
-# ---------- Custom Dark Theme ----------
+# ---------- Dark Academic Styling ----------
 st.markdown("""
 <style>
-body {
-    background-color: #0f172a;
-    color: white;
-}
 .big-title {
     text-align: center;
     font-size: 32px;
@@ -21,7 +18,7 @@ body {
 .section-title {
     font-size: 22px;
     font-weight: bold;
-    margin-top: 20px;
+    margin-top: 25px;
 }
 .stButton>button {
     background-color: #16a34a;
@@ -33,88 +30,107 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- Header ----------
 st.markdown('<p class="big-title">Unbound Layer Thickness Prediction using Machine Learning</p>', unsafe_allow_html=True)
 st.markdown("Decision-support tool for pavement engineering applications")
 
-st.markdown('<p class="section-title">Input Parameters</p>', unsafe_allow_html=True)
+# ---------- Upload Dataset ----------
+uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
 
-# ---------- Input Fields ----------
-col1, col2 = st.columns(2)
+if uploaded_file is not None:
 
-with col1:
-    CBR = st.number_input("CBR (%)", 1.0, 50.0, 10.0)
-    PI = st.number_input("Plasticity Index", 0.0, 40.0, 12.0)
-    OMC = st.number_input("Optimum Moisture Content (%)", 5.0, 30.0, 15.0)
+    df = pd.read_csv(uploaded_file)
+    df = df.select_dtypes(include=np.number)
 
-with col2:
-    MDD = st.number_input("Maximum Dry Density (kN/m³)", 10.0, 25.0, 18.0)
-    LL = st.number_input("Liquid Limit (%)", 10.0, 80.0, 40.0)
-    Sand = st.number_input("Sand Content (%)", 0.0, 100.0, 50.0)
+    st.write("### Dataset Preview")
+    st.dataframe(df.head())
 
-# ---------- Dummy Model (Replace with trained model later) ----------
-def predict_thickness(inputs):
-    # Placeholder prediction logic
-    return 150 + 2*inputs[0] - 1.2*inputs[1] + 0.5*inputs[2]
+    # ---------- Select Target ----------
+    target = st.selectbox("Select Target Column", df.columns)
 
-if st.button("Predict Thickness"):
+    # Separate features
+    features = df.drop(columns=[target]).columns
 
-    inputs = np.array([CBR, PI, OMC, MDD, LL, Sand])
-    prediction = predict_thickness(inputs)
+    # ---------- Train Model (simple RF for deployment demo) ----------
+    X = df[features]
+    y = df[target]
 
-    st.markdown("## Predicted Unbound Layer Thickness")
+    model = RandomForestRegressor(n_estimators=200, random_state=42)
+    model.fit(X, y)
 
-    # ---------- Gauge Chart ----------
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=prediction,
-        title={'text': "Thickness (mm)"},
-        gauge={
-            'axis': {'range': [0, 400]},
-            'bar': {'color': "green"},
-            'steps': [
-                {'range': [0, 150], 'color': "red"},
-                {'range': [150, 250], 'color': "yellow"},
-                {'range': [250, 400], 'color': "green"}
-            ],
-        }
-    ))
+    st.markdown('<p class="section-title">Input Parameters</p>', unsafe_allow_html=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+    # ---------- Dynamic Input Fields ----------
+    user_inputs = []
+    cols = st.columns(2)
 
-    # ---------- Engineering Conclusion ----------
-    st.markdown('<p class="section-title">Engineering Conclusion</p>', unsafe_allow_html=True)
+    for i, feature in enumerate(features):
+        col = cols[i % 2]
+        value = col.number_input(
+            feature,
+            float(X[feature].min()),
+            float(X[feature].max()),
+            float(X[feature].mean())
+        )
+        user_inputs.append(value)
 
-    if prediction < 150:
-        conclusion = "Subgrade Quality: Weak – Increase Thickness Recommended"
-    elif prediction < 250:
-        conclusion = "Subgrade Quality: Moderate – Suitable for Medium Traffic"
-    else:
-        conclusion = "Subgrade Quality: Good – Suitable for Heavy Traffic"
+    # ---------- Prediction ----------
+    if st.button("Predict Thickness"):
 
-    st.success(conclusion)
+        input_array = np.array(user_inputs).reshape(1, -1)
+        prediction = model.predict(input_array)[0]
 
-    # ---------- Download Report ----------
-    report = f"""
-    Unbound Layer Thickness Prediction Report
+        st.markdown("## Predicted Unbound Layer Thickness")
 
-    Input Parameters:
-    CBR: {CBR}
-    PI: {PI}
-    OMC: {OMC}
-    MDD: {MDD}
-    LL: {LL}
-    Sand Content: {Sand}
+        # ---------- Gauge ----------
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=prediction,
+            title={'text': f"{target}"},
+            gauge={
+                'axis': {'range': [float(y.min()), float(y.max())]},
+                'bar': {'color': "green"},
+                'steps': [
+                    {'range': [float(y.min()), float(y.quantile(0.33))], 'color': "red"},
+                    {'range': [float(y.quantile(0.33)), float(y.quantile(0.66))], 'color': "yellow"},
+                    {'range': [float(y.quantile(0.66)), float(y.max())], 'color': "green"}
+                ],
+            }
+        ))
 
-    Predicted Thickness: {round(prediction,2)} mm
+        st.plotly_chart(fig, use_container_width=True)
 
-    Conclusion:
-    {conclusion}
-    """
+        # ---------- Engineering Interpretation ----------
+        st.markdown('<p class="section-title">Engineering Conclusion</p>', unsafe_allow_html=True)
 
-    st.download_button(
-        label="Download Report",
-        data=report,
-        file_name="Thickness_Report.txt",
-        mime="text/plain"
-    )
+        if prediction < y.quantile(0.33):
+            conclusion = "Subgrade Quality: Weak – Higher thickness recommended."
+        elif prediction < y.quantile(0.66):
+            conclusion = "Subgrade Quality: Moderate – Suitable for medium traffic."
+        else:
+            conclusion = "Subgrade Quality: Good – Suitable for heavy traffic."
+
+        st.success(conclusion)
+
+        # ---------- Download Report ----------
+        report = f"""
+Unbound Layer Thickness Prediction Report
+
+Input Parameters:
+"""
+
+        for f, val in zip(features, user_inputs):
+            report += f"{f}: {val}\n"
+
+        report += f"""
+Predicted {target}: {round(prediction,2)}
+
+Conclusion:
+{conclusion}
+"""
+
+        st.download_button(
+            label="Download Report",
+            data=report,
+            file_name="Thickness_Report.txt",
+            mime="text/plain"
+        )
