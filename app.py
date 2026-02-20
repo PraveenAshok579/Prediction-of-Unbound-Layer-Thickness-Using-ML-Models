@@ -85,7 +85,7 @@ if st.button("Predict Unbound Layer Thickness"):
     input_array = np.array(user_inputs).reshape(1, -1)
     prediction = model.predict(input_array)[0]
 
-    st.markdown("## Predicted Unbound Layer Thickness (mm)")
+    st.markdown("## Predicted Unbound Layer Thickness (inch)")
 
     # --------- Custom Semi Circular Meter ----------
     fig = go.Figure(go.Indicator(
@@ -117,4 +117,5 @@ if st.button("Predict Unbound Layer Thickness"):
         conclusion = "Subgrade Condition: Good – Suitable for heavy traffic applications."
 
     st.success(conclusion)
+
 
