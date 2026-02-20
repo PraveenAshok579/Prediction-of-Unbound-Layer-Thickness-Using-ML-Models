@@ -1,6 +1,5 @@
 streamlit
-pandas
 numpy
+pandas
+plotly
 scikit-learn
-xgboost
-openpyxl
